@@ -13,3 +13,5 @@ html-report
 coverage-final.lcov
 coverage-unmapped.json
 /_build
+.vscode
+
