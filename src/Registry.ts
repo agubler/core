@@ -1,12 +1,21 @@
 import { Handle } from './interfaces';
 
+type Key = Test | null;
+
+/**
+ * The interface that a test function must implement.
+ */
+export interface Test {
+	(...args: any[]): boolean;
+}
+
 /**
  * An entry in a Registry. Each Entry contains a test to determine whether the Entry is applicable, and a value for the
  * entry.
  */
 interface Entry<T> {
-	test: Test;
-	value: T;
+	test: Key;
+	value: (T | null);
 }
 
 /**
@@ -14,13 +23,15 @@ interface Entry<T> {
  */
 export default class Registry<T> {
 	protected _defaultValue: T;
-	private _entries: Entry<T>[];
+	private _entries: Entry<T>[] | null;
 
 	/**
 	 * Construct a new Registry, optionally containing a given default value.
 	 */
 	constructor(defaultValue?: T) {
-		this._defaultValue = defaultValue;
+		if (defaultValue) {
+			this._defaultValue = defaultValue;
+		}
 		this._entries = [];
 	}
 
@@ -31,13 +42,17 @@ export default class Registry<T> {
 	 * @param ...args Arguments that will be used to select a matching value.
 	 * @returns the matching value, or a default value if one exists.
 	 */
-	match(...args: any[]): T {
-		let entries = this._entries.slice(0);
-		let entry: Entry<T>;
+	match(...args: any[]): T | null {
+		if (this._entries) {
+			let entries = this._entries.slice(0);
+			let entry: Entry<T>;
 
-		for (let i = 0; (entry = entries[i]); ++i) {
-			if (entry.test.apply(null, args)) {
-				return entry.value;
+			if (entries) {
+				for (let i = 0; (entry = entries[i]); ++i) {
+					if (entry.test && entry.test.apply(null, args)) {
+						return entry.value;
+					}
+				}
 			}
 		}
 
@@ -55,9 +70,9 @@ export default class Registry<T> {
 	 * @param value A value being registered.
 	 * @param first If true, the newly registered test and value will be the first entry in the registry.
 	 */
-	register(test: Test, value: T, first?: boolean): Handle {
+	register(test: Test | null, value: T | null, first?: boolean): Handle {
 		let entries = this._entries;
-		let entry: Entry<T> = {
+		let entry: Entry<T | null> | null = {
 			test: test,
 			value: value
 		};
@@ -68,8 +83,10 @@ export default class Registry<T> {
 			destroy: function () {
 				this.destroy = function (): void {};
 				let i = 0;
-				while ((i = entries.indexOf(entry, i)) > -1) {
-					entries.splice(i, 1);
+				if (entry && entries) {
+					while ((i = entries.indexOf(entry, i)) > -1) {
+						entries.splice(i, 1);
+					}
 				}
 				test = value = entries = entry = null;
 			}
@@ -77,9 +94,3 @@ export default class Registry<T> {
 	}
 }
 
-/**
- * The interface that a test function must implement.
- */
-export interface Test {
-	(...args: any[]): boolean;
-}
